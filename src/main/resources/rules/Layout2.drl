@@ -7,7 +7,7 @@ import com.google.gson.Gson;
 
 rule "Layout 2"
     when
-       m : QEventMessage( QEventMessage.data.getCode().equals("layout2") )
+       m : QEventMessage( QEventMessage.data.getCode() == "layout2" )
        bus: EventBus()
     then
         QCmdMessage cmd = new QCmdMessage("CMD_LAYOUT","layout2");

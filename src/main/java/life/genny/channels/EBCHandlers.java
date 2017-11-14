@@ -37,6 +37,7 @@ import life.genny.qwanda.Ask;
 import life.genny.qwanda.message.QDataAnswerMessage;
 import life.genny.qwanda.message.QDataAskMessage;
 import life.genny.qwanda.message.QDataRuleMessage;
+import life.genny.qwanda.message.QEventAttributeValueChangeMessage;
 import life.genny.qwanda.message.QEventMessage;
 import life.genny.qwanda.rule.Rule;
 import life.genny.qwandautils.KeycloakUtils;
@@ -87,8 +88,43 @@ public class EBCHandlers {
       final JsonObject payload = new JsonObject(arg.body().toString());
       final String token = payload.getString("token");
       System.out.println(payload);
-      final QEventMessage eventMsg = gson.fromJson(payload.toString(), QEventMessage.class);
-      processEvent(eventMsg, eventBus, token);
+      
+      System.out.println("\n Debug: Printing Message inside registerHandlers (Before calling processEvent): "+payload);
+      QEventMessage eventMsg = null;
+      if(payload.getString("event_type").equals("EVT_ATTRIBUTE_VALUE_CHANGE")) {
+    	     //String data = payload.getString("data");
+    	    // Map<String, String> data = null;
+    	     JsonObject dataJson = payload.getJsonObject("data");
+    	       
+    	     // payload.getValue("data", data);
+    	     System.out.println("\n The data value from dataJson is : "+dataJson.getString("code"));
+    	     // eventMsg = gson.fromJson(payload.toString(), QEventAttributeValueChangeMessage.class);
+    	      //eventMsg.getData().setCode(data.get("code"));
+//    	      MessageData md = new MessageData(dataJson.getString("code"));
+    	     System.out.println("\n The Source BE data value from dataJson is : "+payload.getString("sourceBaseEntityCode"));
+    	     System.out.println("\n The Target BE data value from dataJson is : "+payload.getString("targetBaseEntityCode"));
+    	     System.out.println("\n The oldValue data value from dataJson is : "+payload.getString("oldValue"));
+    	     System.out.println("\n The newValue data value from dataJson is : "+payload.getString("newValue"));
+    	     
+    	      QEventAttributeValueChangeMessage 
+    	      attributeValueChangeEventMsg = new QEventAttributeValueChangeMessage(payload.getString("sourceBaseEntityCode"), payload.getString("targetBaseEntityCode"), dataJson.getString("code"), payload.getString("oldValue"), payload.getString("newValue"), payload.getString("token"));
+    	      
+    	     // eventMsg.setData(md);
+    	      System.out.println("\n Debug: event_type= EVT_ATTRIBUTE_VALUE_CHANGE received");
+    	      System.out.println("\n Debug: QEventAttributeValueChangeMessage after building "+attributeValueChangeEventMsg.data.getCode());
+    	      System.out.println("\n Debug: QEventAttributeValueChangeMessage after building getData() "+attributeValueChangeEventMsg.getData().getCode());
+    	      System.out.println(attributeValueChangeEventMsg.getClass().getSimpleName());
+    	      System.out.println("\n Debug: Printing Message after inside registerHandlers (Before calling processEvent): "+attributeValueChangeEventMsg); 
+    	      processEvent(attributeValueChangeEventMsg, eventBus, token);
+      }else {
+    	      eventMsg = gson.fromJson(payload.toString(), QEventMessage.class);   
+    	      System.out.println(eventMsg.getClass().getSimpleName());
+    	      System.out.println("\n Debug: Printing Message after inside registerHandlers (Before calling processEvent): "+eventMsg); 
+    	      processEvent(eventMsg, eventBus, token);  
+    	      
+       }
+      
+      
     });
 
     EBConsumers.getFromData().subscribe(arg -> {
@@ -110,40 +146,48 @@ public class EBCHandlers {
     });
   }
 
+  
+  static Map<String, Object> decodedToken = null;
+  static Set<String> userRoles = null;
 
   public static void processEvent(final QEventMessage eventMsg, final EventBus bus,
       final String token) {
     Vertx.vertx().executeBlocking(future -> {
       // kSession = createSession(bus, token);
+     System.out.println("\n Debug: Printing Message inside processEvent: "+eventMsg.getData().getCode());
+     System.out.println("\n The token received is: "+token); 
+     if((token != null) && (!token.isEmpty())){
+         // Getting decoded token in Hash Map from QwandaUtils
+         decodedToken = KeycloakUtils.getJsonMap(token);
+         // Getting Set of User Roles from QwandaUtils
+            userRoles =
+             KeycloakUtils.getRoleSet(decodedToken.get("realm_access").toString());
 
-      // Getting decoded token in Hash Map from QwandaUtils
-      final Map<String, Object> decodedToken = KeycloakUtils.getJsonMap(token);
-      // Getting Set of User Roles from QwandaUtils
-      final Set<String> userRoles =
-          KeycloakUtils.getRoleSet(decodedToken.get("realm_access").toString());
-
-      System.out.println("The Roles value are: " + userRoles.toString());
-
-      /*
-       * Getting Prj Realm name from KeyCloakUtils - Just cheating the keycloak realm names as we
-       * can't add multiple realms in genny keyclaok as it is open-source
-       */
-      final String projectRealm = KeycloakUtils.getPRJRealmFromDevEnv();
-      if ((projectRealm != null) && (!projectRealm.isEmpty())) {
-        decodedToken.put("realm", projectRealm);
-      } else {
-        // Extracting realm name from iss value
-        final String realm = (decodedToken.get("iss").toString()
-            .substring(decodedToken.get("iss").toString().lastIndexOf("/") + 1));
-        // Adding realm name to the decoded token
-        decodedToken.put("realm", realm);
-      }
+          System.out.println("The Roles value are: " + userRoles.toString());
+     
+         /*
+          * Getting Prj Realm name from KeyCloakUtils - Just cheating the keycloak realm names as we
+          * can't add multiple realms in genny keyclaok as it is open-source
+          */
+          final String projectRealm = KeycloakUtils.getPRJRealmFromDevEnv();
+          if ((projectRealm != null) && (!projectRealm.isEmpty())) {
+               decodedToken.put("realm", projectRealm);
+           } else {
+              // Extracting realm name from iss value
+              final String realm = (decodedToken.get("iss").toString()
+                .substring(decodedToken.get("iss").toString().lastIndexOf("/") + 1));
+              // Adding realm name to the decoded token
+              decodedToken.put("realm", realm);
+            }
       System.out.println("######  The realm name is:  #####  " + decodedToken.get("realm"));
       // Printing Decoded Token values
       for (final Map.Entry entry : decodedToken.entrySet()) {
         System.out.println(entry.getKey() + ", " + entry.getValue());
       }
+     }
+      System.out.println("\n Debug: Printing Message inside processEvent before fireAllRules(): "+eventMsg);
 
+      
       try {
         kSession = createSession(bus, token, decodedToken, userRoles);
         kSession.insert(eventMsg);
@@ -161,8 +205,8 @@ public class EBCHandlers {
 
   }
 
-  public static KieSession createSession(final EventBus bus, final String token,
-      final Map<String, Object> tokenDecoded, final Set<String> roles) {
+  public static KieSession createSession(EventBus bus, String token,
+      Map<String, Object> tokenDecoded, Set<String> roles) {
     // ks = KieServices.Factory.get();
     if (ks == null) {
       System.out.println("ks is NULL!!!");

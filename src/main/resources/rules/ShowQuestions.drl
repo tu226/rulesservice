@@ -34,7 +34,7 @@ import life.genny.qwanda.DateTimeDeserializer;
 
 rule "ShowQuestions"
     when
-      m : QEventMessage( QEventMessage.data.getCode().equals("Asks") )
+      m : QEventMessage( QEventMessage.data.getCode() == "Asks" )
       bus: EventBus()
       $map : Map($value: this["token"])
     then

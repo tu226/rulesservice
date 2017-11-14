@@ -175,9 +175,10 @@ rule "Select Dashboard lower level child"
         QCmdMessage cmd = new QCmdMessage("CMD_VIEW","TABLE_VIEW");
         //Convert cmd to JSON Obj
         JsonObject cmdObj = new JsonObject().mapFrom(cmd);
-        cmdObj.put("data", "itemsPerPage:5");        
+        cmdObj.put("data", "itemsPerPage:5");
+        cmdObj.put("root", $m.getData().getValue());          
         System.out.println(" ##################### ");
-        System.out.println("Layout Data ="+cmdObj.toString()); 
+        System.out.println("Layout Data = "+cmdObj.toString()); 
         System.out.println(" #################### ");
         //Publish it to the EventBus
         bus.publish("cmds", cmdObj); 
@@ -211,7 +212,8 @@ rule "Select TreeView Item: GRP_USERS"
         QCmdMessage cmd = new QCmdMessage("CMD_VIEW","TABLE_VIEW");
         //Convert cmd to JSON Obj
         JsonObject cmdObj = new JsonObject().mapFrom(cmd);
-        cmdObj.put("data", "itemsPerPage:5");        
+        cmdObj.put("data", "itemsPerPage:5");
+        cmdObj.put("root", $m.getData().getValue());        
         System.out.println(" ##################### ");
         System.out.println("Layout Data ="+cmdObj.toString()); 
         System.out.println(" #################### ");
@@ -291,6 +293,18 @@ rule "asks for TreeView-YOUR_DETAILS click"
         $map : Map($value: this["token"] != null)
     then
  	    System.out.println("------- EXPAND GRP_YOUR_DETAILS RULE --------");
+ 	    
+ 	    //sending cmd view 
+        QCmdMessage cmd = new QCmdMessage("CMD_VIEW","FORM_VIEW");
+        //Convert cmd to JSON Obj
+        JsonObject cmdObj = new JsonObject().mapFrom(cmd);
+        cmdObj.put("data", "itemsPerPage:5");    
+        System.out.println(" ##################### ");
+        System.out.println("Layout Data ="+cmdObj.toString()); 
+        System.out.println(" #################### ");
+        //Publish it to the EventBus
+        bus.publish("cmds", cmdObj); 
+        
 		String qwandaServiceUrl = System.getenv("REACT_APP_QWANDA_API_URL")==null?System.getenv("REACT_APP_QWANDA_API_URL"):REACT_APP_QWANDA_API_URL;
   	    String tokenString = (String)$map.get("token");
 		System.out.println("tokenstr="+tokenString);
@@ -300,4 +314,6 @@ rule "asks for TreeView-YOUR_DETAILS click"
 		System.out.println("Json="+obj.toString());	
 		System.out.println("*******************");						
 		bus.publish("cmds", obj);
+		
+		
 end  
