@@ -89,41 +89,14 @@ public class EBCHandlers {
       final String token = payload.getString("token");
       System.out.println(payload);
       
-      System.out.println("\n Debug: Printing Message inside registerHandlers (Before calling processEvent): "+payload);
       QEventMessage eventMsg = null;
       if(payload.getString("event_type").equals("EVT_ATTRIBUTE_VALUE_CHANGE")) {
-    	     //String data = payload.getString("data");
-    	    // Map<String, String> data = null;
-    	     JsonObject dataJson = payload.getJsonObject("data");
-    	       
-    	     // payload.getValue("data", data);
-    	     System.out.println("\n The data value from dataJson is : "+dataJson.getString("code"));
-    	     // eventMsg = gson.fromJson(payload.toString(), QEventAttributeValueChangeMessage.class);
-    	      //eventMsg.getData().setCode(data.get("code"));
-//    	      MessageData md = new MessageData(dataJson.getString("code"));
-    	     System.out.println("\n The Source BE data value from dataJson is : "+payload.getString("sourceBaseEntityCode"));
-    	     System.out.println("\n The Target BE data value from dataJson is : "+payload.getString("targetBaseEntityCode"));
-    	     System.out.println("\n The oldValue data value from dataJson is : "+payload.getString("oldValue"));
-    	     System.out.println("\n The newValue data value from dataJson is : "+payload.getString("newValue"));
-    	     
-    	      QEventAttributeValueChangeMessage 
-    	      attributeValueChangeEventMsg = new QEventAttributeValueChangeMessage(payload.getString("sourceBaseEntityCode"), payload.getString("targetBaseEntityCode"), dataJson.getString("code"), payload.getString("oldValue"), payload.getString("newValue"), payload.getString("token"));
-    	      
-    	     // eventMsg.setData(md);
-    	      System.out.println("\n Debug: event_type= EVT_ATTRIBUTE_VALUE_CHANGE received");
-    	      System.out.println("\n Debug: QEventAttributeValueChangeMessage after building "+attributeValueChangeEventMsg.data.getCode());
-    	      System.out.println("\n Debug: QEventAttributeValueChangeMessage after building getData() "+attributeValueChangeEventMsg.getData().getCode());
-    	      System.out.println(attributeValueChangeEventMsg.getClass().getSimpleName());
-    	      System.out.println("\n Debug: Printing Message after inside registerHandlers (Before calling processEvent): "+attributeValueChangeEventMsg); 
-    	      processEvent(attributeValueChangeEventMsg, eventBus, token);
+    	     //Converting Json to QEventAttributeValueChangeMessage class
+    	     eventMsg = gson.fromJson(payload.toString(), QEventAttributeValueChangeMessage.class);
       }else {
-    	      eventMsg = gson.fromJson(payload.toString(), QEventMessage.class);   
-    	      System.out.println(eventMsg.getClass().getSimpleName());
-    	      System.out.println("\n Debug: Printing Message after inside registerHandlers (Before calling processEvent): "+eventMsg); 
-    	      processEvent(eventMsg, eventBus, token);  
-    	      
+    	      eventMsg = gson.fromJson(payload.toString(), QEventMessage.class);    	      
        }
-      
+       processEvent(eventMsg, eventBus, token);  
       
     });
 
@@ -154,8 +127,7 @@ public class EBCHandlers {
       final String token) {
     Vertx.vertx().executeBlocking(future -> {
       // kSession = createSession(bus, token);
-     System.out.println("\n Debug: Printing Message inside processEvent: "+eventMsg.getData().getCode());
-     System.out.println("\n The token received is: "+token); 
+
      if((token != null) && (!token.isEmpty())){
          // Getting decoded token in Hash Map from QwandaUtils
          decodedToken = KeycloakUtils.getJsonMap(token);
@@ -185,8 +157,6 @@ public class EBCHandlers {
         System.out.println(entry.getKey() + ", " + entry.getValue());
       }
      }
-      System.out.println("\n Debug: Printing Message inside processEvent before fireAllRules(): "+eventMsg);
-
       
       try {
         kSession = createSession(bus, token, decodedToken, userRoles);

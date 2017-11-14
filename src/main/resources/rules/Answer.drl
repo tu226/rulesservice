@@ -1,7 +1,6 @@
 package com.sample
 import life.genny.qwanda.message.QEventMessage;
 import life.genny.qwanda.message.QMessage.MessageData;
-//import life.genny.qwanda.message.MessageData;
 import life.genny.qwanda.message.QCmdMessage;
 import io.vertx.rxjava.core.eventbus.EventBus;
 import io.vertx.core.buffer.Buffer;
@@ -114,12 +113,23 @@ rule "Listen Attribute Change"
        System.out.println("\n The code is: "+$m.data.getCode()); 
        
         //Convert cmd to JSON Obj
-        JsonObject obj1 = new JsonObject().mapFrom($m);
+        JsonObject obj1 = new JsonObject();
+          obj1.put("value", $m.getNewValue());
+          obj1.put("attributeCode", $m.data.getCode());
+          obj1.put("targetCode", $m.getTargetBaseEntityCode()); 
+          obj1.put("sourceCode", $m.getSourceBaseEntityCode());  
+          obj1.put("expired", false);
+          obj1.put("refused", false);
+          obj1.put("weight", "0.0");
+        //Creating Answer DATA_MSG
+        JsonObject obj2 = new JsonObject();
+            obj2.put("msg_type", "DATA_MSG");
+            obj2.put("data_type", "Answer");
+            obj2.put("items", obj1); 
         //Print Answer
         System.out.println("************************************************************");
-        System.out.println("Answer From attribute change= "+obj1.toString()); 
-        System.out.println("************************************************************");
-            
-        bus.publish("cmds", obj1);
+        System.out.println("Answer From attribute change= "+obj2.toString()); 
+        System.out.println("************************************************************");           
+        bus.publish("cmds", obj2);
 end
 
